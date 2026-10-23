@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#176448">
+<title>Golf Score</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#173b2e;background:#f2f6f3}*{box-sizing:border-box}body{margin:0;padding:16px 12px 40px}main{max-width:620px;margin:auto}header{background:#176448;color:white;padding:22px 18px;border-radius:18px;margin-bottom:14px}h1{font-size:26px;margin:0 0 5px}header p{margin:0;font-size:13px;opacity:.85}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px}.stat{background:white;border-radius:13px;text-align:center;padding:13px 5px;box-shadow:0 1px 5px #0001}.stat small{display:block;font-size:11px;color:#5b6d63}.stat strong{display:block;font-size:25px;margin-top:5px}.panel{background:white;border-radius:16px;padding:14px 10px;box-shadow:0 1px 5px #0001}h2{font-size:16px;margin:4px 8px 13px}.head,.hole{display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr;align-items:center;text-align:center;gap:5px}.head{color:#64756a;font-size:12px;padding:5px 0 9px;border-bottom:1px solid #dce7df}.hole{padding:8px 0;border-bottom:1px solid #edf1ee}.hole:last-child{border-bottom:0}.hole:nth-child(10){border-top:2px solid #c4d6c9}.hole b{font-size:15px}.hole input{width:100%;max-width:76px;min-height:38px;text-align:center;border:1px solid #cbd9cf;border-radius:9px;background:white;color:#173b2e;font-size:16px}.hole input:focus{outline:2px solid #17805b}.delta{font-weight:700}.under{color:#087647}.over{color:#bc582b}.controls{display:flex;gap:10px;margin:15px 0}.controls button{flex:1;padding:14px 8px;border:0;border-radius:11px;font-size:14px;font-weight:700}.reset{background:#e6ece8;color:#315342}.demo{background:#176448;color:white}.note{font-size:12px;line-height:1.7;color:#607267;padding:0 5px}
+</style>
+</head>
+<body><main>
+<header><h1>Golf Score</h1><p>18ホールのスコアを記録</p></header>
+<section class="summary" aria-label="スコア集計"><div class="stat"><small>合計打数</small><strong id="total">—</strong></div><div class="stat"><small>入力済パーとの差</small><strong id="diff">—</strong></div><div class="stat"><small>入力ホール数</small><strong id="count">0/18</strong></div></section>
+<section class="panel"><h2>スコアカード</h2><div class="head"><span>ホール</span><span>PAR</span><span>打数</span><span>差</span></div><div id="holes"></div></section>
+<div class="controls"><button class="demo" id="sample">入力例を表示</button><button class="reset" id="reset">記録をリセット</button></div>
+<p class="note">入力すると自動保存されます。保存先はこのブラウザ内です。履歴保存や別端末との同期には対応していません。Safariの履歴・Webサイトデータを削除すると記録が失われる場合があります。</p>
+</main>
+<script>
+(()=>{'use strict';
+const KEY='golf-score-v1';
+const defaults=[4,4,3,5,4,4,3,5,4,4,3,5,4,4,3,5,4,4];
+let data={pars:[...defaults],scores:Array(18).fill('')};
+try{const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&Array.isArray(saved.pars)&&Array.isArray(saved.scores)&&saved.pars.length===18&&saved.scores.length===18){data.pars=saved.pars.map((v,i)=>[3,4,5].includes(Number(v))?Number(v):defaults[i]);data.scores=saved.scores.map(v=>v===''?'':Number.isInteger(Number(v))&&Number(v)>=1&&Number(v)<=30?String(v):'');}}catch(e){}
+const root=document.getElementById('holes');
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+function update(){let total=0,diff=0,count=0;data.scores.forEach((v,i)=>{if(v!==''){const n=Number(v);total+=n;diff+=n-data.pars[i];count++;}});document.getElementById('total').textContent=count?total:'—';document.getElementById('diff').textContent=count?(diff>0?'+':'')+diff:'—';document.getElementById('count').textContent=count+'/18';root.querySelectorAll('.hole').forEach((row,i)=>{const d=row.querySelector('.delta');const v=data.scores[i];const n=Number(v)-data.pars[i];d.textContent=v===''?'—':(n>0?'+':'')+n;d.className='delta '+(v===''?'':n<0?'under':n>0?'over':'');});save();}
+function render(){root.innerHTML='';for(let i=0;i<18;i++){const row=document.createElement('div');row.className='hole';const name=document.createElement('b');name.textContent=i+1;const par=document.createElement('select');par.setAttribute('aria-label',(i+1)+'番ホールのパー');par.style.cssText='width:100%;max-width:76px;min-height:38px;border:1px solid #cbd9cf;border-radius:9px;background:white;color:#173b2e;font-size:16px;text-align:center';for(const n of [3,4,5]){const option=document.createElement('option');option.value=n;option.textContent=n;par.append(option);}par.value=data.pars[i];par.addEventListener('change',()=>{data.pars[i]=Number(par.value);update();});const input=document.createElement('input');input.type='number';input.inputMode='numeric';input.min='1';input.max='30';input.placeholder='—';input.setAttribute('aria-label',(i+1)+'番ホールの打数');input.value=data.scores[i];input.addEventListener('input',()=>{const value=input.value;if(value===''){data.scores[i]='';update();return;}const n=Number(value);if(Number.isInteger(n)&&n>=1&&n<=30){data.scores[i]=String(n);update();}});input.addEventListener('change',()=>{input.value=data.scores[i];});const delta=document.createElement('span');delta.className='delta';row.append(name,par,input,delta);root.append(row);}update();}
+document.getElementById('reset').addEventListener('click',()=>{if(confirm('入力したスコアをすべて消去しますか？')){data.scores=Array(18).fill('');render();}});
+document.getElementById('sample').addEventListener('click',()=>{if(data.scores.some(v=>v!=='')&&!confirm('現在の打数を入力例で上書きしますか？'))return;data.scores=[5,4,4,6,5,4,3,6,5,4,4,5,5,4,3,6,4,5].map(String);render();});
+render();
+})();
+</script>
+</body></html>
